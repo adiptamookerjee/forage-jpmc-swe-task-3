@@ -1,0 +1,297 @@
+From 0d9fc524e6f6bbd5e67a4ee56fd658958021b88f Mon Sep 17 00:00:00 2001
+From: adiptamookerjee <adipta.mookerjee@gmail.com>
+Date: Tue, 9 Jan 2024 14:15:44 +0530
+Subject: [PATCH 1/5] The components are modified and altered according to the
+ requirements. The top ask price is eliminated and now the plotting is based
+ on the ratio of the two stocks. Also upper, lower bound and a trigger alert
+ is added.
+
+---
+ src/Graph.tsx | 21 +++++++++++++--------
+ 1 file changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 277797d..8bc94b1 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -23,10 +23,13 @@ class Graph extends Component<IProps, {}> {
+     const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+-      stock: 'string',
+-      top_ask_price: 'float',
+-      top_bid_price: 'float',
++      price_abc: 'float',
++      price_def: 'float',
++      ratio: 'float',
+       timestamp: 'date',
++      upper_bound: 'float',
++      lower_bound: 'float',
++      trigger_alert: 'float',  
+     };
+ 
+     if (window.perspective && window.perspective.worker()) {
+@@ -36,14 +39,16 @@ class Graph extends Component<IProps, {}> {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+       elem.load(this.table);
+       elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('column-pivots', '["stock"]');
+       elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('columns', '["ratio","lower_bound","upper_bouond","trigger_alert"]');
+       elem.setAttribute('aggregates', JSON.stringify({
+-        stock: 'distinctcount',
+-        top_ask_price: 'avg',
+-        top_bid_price: 'avg',
++        price_abc: 'avg',
++        price_def: 'avg',
++        ratio: 'avg',
+         timestamp: 'distinct count',
++        upper_bound: 'avg',
++        lower_bound: 'avg',
++        trigger_alert: 'avg',
+       }));
+     }
+   }
+-- 
+2.34.1
+
+
+From f428d97b16a1ba0f16da5cb531f6806f5f93655e Mon Sep 17 00:00:00 2001
+From: adiptamookerjee <adipta.mookerjee@gmail.com>
+Date: Tue, 9 Jan 2024 14:21:24 +0530
+Subject: [PATCH 2/5] componentDidUpdate() method is changed to alter the graph
+ according to the argument that is ppassed to this.table.update
+
+---
+ src/Graph.tsx | 68 ++++++++++++++++++++++++++++-----------------------
+ 1 file changed, 38 insertions(+), 30 deletions(-)
+
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 8bc94b1..eb0f11e 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -1,35 +1,37 @@
+-import React, { Component } from 'react';
+-import { Table } from '@finos/perspective';
+-import { ServerRespond } from './DataStreamer';
+-import { DataManipulator } from './DataManipulator';
+-import './Graph.css';
++import React, { Component } from "react";
++import { Table, TableData } from "@finos/perspective";
++import { ServerRespond } from "./DataStreamer";
++import { DataManipulator } from "./DataManipulator";
++import "./Graph.css";
+ 
+ interface IProps {
+-  data: ServerRespond[],
++  data: ServerRespond[];
+ }
+ 
+ interface PerspectiveViewerElement extends HTMLElement {
+-  load: (table: Table) => void,
++  load: (table: Table) => void;
+ }
+ class Graph extends Component<IProps, {}> {
+   table: Table | undefined;
+ 
+   render() {
+-    return React.createElement('perspective-viewer');
++    return React.createElement("perspective-viewer");
+   }
+ 
+   componentDidMount() {
+     // Get element from the DOM.
+-    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = (document.getElementsByTagName(
++      "perspective-viewer"
++    )[0] as unknown) as PerspectiveViewerElement;
+ 
+     const schema = {
+-      price_abc: 'float',
+-      price_def: 'float',
+-      ratio: 'float',
+-      timestamp: 'date',
+-      upper_bound: 'float',
+-      lower_bound: 'float',
+-      trigger_alert: 'float',  
++      price_abc: "float",
++      price_def: "float",
++      ratio: "float",
++      timestamp: "date",
++      upper_bound: "float",
++      lower_bound: "float",
++      trigger_alert: "float",
+     };
+ 
+     if (window.perspective && window.perspective.worker()) {
+@@ -38,26 +40,32 @@ class Graph extends Component<IProps, {}> {
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+       elem.load(this.table);
+-      elem.setAttribute('view', 'y_line');
+-      elem.setAttribute('row-pivots', '["timestamp"]');
+-      elem.setAttribute('columns', '["ratio","lower_bound","upper_bouond","trigger_alert"]');
+-      elem.setAttribute('aggregates', JSON.stringify({
+-        price_abc: 'avg',
+-        price_def: 'avg',
+-        ratio: 'avg',
+-        timestamp: 'distinct count',
+-        upper_bound: 'avg',
+-        lower_bound: 'avg',
+-        trigger_alert: 'avg',
+-      }));
++      elem.setAttribute("view", "y_line");
++      elem.setAttribute("row-pivots", '["timestamp"]');
++      elem.setAttribute(
++        "columns",
++        '["ratio","lower_bound","upper_bouond","trigger_alert"]'
++      );
++      elem.setAttribute(
++        "aggregates",
++        JSON.stringify({
++          price_abc: "avg",
++          price_def: "avg",
++          ratio: "avg",
++          timestamp: "distinct count",
++          upper_bound: "avg",
++          lower_bound: "avg",
++          trigger_alert: "avg",
++        })
++      );
+     }
+   }
+ 
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(
++      this.table.update(([
+         DataManipulator.generateRow(this.props.data),
+-      );
++      ] as unknown) as TableData);
+     }
+   }
+ }
+-- 
+2.34.1
+
+
+From 46d06ef23c9ef13421c903826c67811743647618 Mon Sep 17 00:00:00 2001
+From: adiptamookerjee <adipta.mookerjee@gmail.com>
+Date: Tue, 9 Jan 2024 14:26:33 +0530
+Subject: [PATCH 3/5] Changing the schema returned by the DataManipulator.ts
+ file to match with the schema of the table.
+
+---
+ src/DataManipulator.ts | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+index 7f62295..4ef35c7 100644
+--- a/src/DataManipulator.ts
++++ b/src/DataManipulator.ts
+@@ -1,9 +1,13 @@
+ import { ServerRespond } from './DataStreamer';
+ 
+ export interface Row {
+-  stock: string,
+-  top_ask_price: number,
++  price_abc: number,
++  price_def: number,
++  ratio: number,
+   timestamp: Date,
++  upper_bound: number,
++  lower_bound: number,
++  trigger_alert: number | undefined,
+ }
+ 
+ 
+-- 
+2.34.1
+
+
+From e4d63dfaf19f96d310873ae4602018fe75371947 Mon Sep 17 00:00:00 2001
+From: adiptamookerjee <adipta.mookerjee@gmail.com>
+Date: Tue, 9 Jan 2024 14:40:59 +0530
+Subject: [PATCH 4/5] Updating the generateRow method to compute the correct
+ price of ABC and DEF and compute their ratio, set upper and lower bound and
+ set trigger_alerts.
+
+---
+ src/DataManipulator.ts | 23 +++++++++++++++--------
+ 1 file changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/src/DataManipulator.ts b/src/DataManipulator.ts
+index 4ef35c7..9205097 100644
+--- a/src/DataManipulator.ts
++++ b/src/DataManipulator.ts
+@@ -12,13 +12,20 @@ export interface Row {
+ 
+ 
+ export class DataManipulator {
+-  static generateRow(serverResponds: ServerRespond[]) {
+-    return serverResponds.map((el: any) => {
+-      return {
+-        stock: el.stock,
+-        top_ask_price: el.top_ask && el.top_ask.price || 0,
+-        timestamp: el.timestamp,
+-      };
+-    })
++  static generateRow(serverRespond: ServerRespond[]) :Row{
++    const priceABC = (serverRespond[0].top_ask.price + serverRespond[0].top_bid.price)/2;
++    const priceDEF = (serverRespond[1].top_ask.price + serverRespond[1].top_bid.price)/2;
++    const ratio = priceABC/priceDEF;
++    const upperBound = 1 + 0.05;
++    const lowerBound = 1 - 0.05;
++    return {
++        price_abc: priceABC,
++        price_def: priceDEF,
++        ratio,
++        timestamp: serverRespond[0].timestamp > serverRespond[1].timestamp ? serverRespond[0].timestamp : serverRespond[1].timestamp,
++        upper_bound: upperBound,
++        lower_bound: lowerBound,
++        trigger_alert: (ratio > upperBound || ratio < lowerBound) ? ratio : undefined,
++    };
+   }
+ }
+-- 
+2.34.1
+
+
+From 177b121e47ed9fe7064c82709403767a23f0d437 Mon Sep 17 00:00:00 2001
+From: adiptamookerjee <adipta.mookerjee@gmail.com>
+Date: Tue, 9 Jan 2024 14:48:05 +0530
+Subject: [PATCH 5/5] Minor bugfix.
+
+---
+ src/Graph.tsx | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index eb0f11e..50da8f2 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -44,7 +44,7 @@ class Graph extends Component<IProps, {}> {
+       elem.setAttribute("row-pivots", '["timestamp"]');
+       elem.setAttribute(
+         "columns",
+-        '["ratio","lower_bound","upper_bouond","trigger_alert"]'
++        '["ratio","lower_bound","upper_bound","trigger_alert"]'
+       );
+       elem.setAttribute(
+         "aggregates",
+@@ -63,9 +63,9 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidUpdate() {
+     if (this.table) {
+-      this.table.update(([
++      this.table.update([
+         DataManipulator.generateRow(this.props.data),
+-      ] as unknown) as TableData);
++      ] as unknown as TableData);
+     }
+   }
+ }
+-- 
+2.34.1
+
