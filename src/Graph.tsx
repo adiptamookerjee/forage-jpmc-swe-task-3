@@ -44,7 +44,7 @@ class Graph extends Component<IProps, {}> {
       elem.setAttribute("row-pivots", '["timestamp"]');
       elem.setAttribute(
         "columns",
-        '["ratio","lower_bound","upper_bouond","trigger_alert"]'
+        '["ratio","lower_bound","upper_bound","trigger_alert"]'
       );
       elem.setAttribute(
         "aggregates",
@@ -63,9 +63,9 @@ class Graph extends Component<IProps, {}> {
 
   componentDidUpdate() {
     if (this.table) {
-      this.table.update(([
+      this.table.update([
         DataManipulator.generateRow(this.props.data),
-      ] as unknown) as TableData);
+      ] as unknown as TableData);
     }
   }
 }
